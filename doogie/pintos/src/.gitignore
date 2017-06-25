@@ -3,3 +3,5 @@ cscope.out
 srcfiles.txt
 TAGS
 tags
+*.swp
+*swp

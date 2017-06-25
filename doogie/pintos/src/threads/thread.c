@@ -93,6 +93,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init(&blocked_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -331,6 +332,7 @@ void thread_sleep(int64_t ticks)
    enum intr_level old_level;
 
    ASSERT(!intr_context());
+
    old_level = intr_disable();
    if (cur != idle_thread) {
     cur->sleep_tick = ticks;
@@ -340,28 +342,34 @@ void thread_sleep(int64_t ticks)
    }
    schedule();
    intr_set_level(old_level);
-   printf("hi");
 }
 
 void thread_wakeup(void)
 {
-  int current_tick = timer_ticks();
+  int64_t current_tick = timer_ticks();
+  struct thread *cur = thread_current();
   struct list_elem *e;
+  enum intr_level old_level;
 
-  ASSERT(intr_get_level() == INTR_OFF);
+  old_level = intr_disable();
 
-  for (e = list_begin(&blocked_list); e != list_end(&blocked_list); 
-       e = list_next(e))
-  {
-  	struct thread *t = list_entry(e, struct thread, elem);
-  	
-  	if (t->sleep_tick <= current_tick) {
-	  list_remove(&t->elem);
-	  list_push_back(&ready_list, &t->elem);
-	  t->status = THREAD_READY;
-	}
-	// schedule();
+  e = list_begin(&blocked_list);
+  while (e != list_end(&blocked_list)) {
+    struct thread *t = list_entry(e, struct thread, elem);
+    struct list_elem *next_elem = list_next(e);
+    
+    if (t->sleep_tick <= current_tick) {
+      //printf("sleep tick: %d ", t->sleep_tick);
+      //printf("current tick: %d\n", current_tick);
+    
+      list_remove(e);
+      list_push_back(&ready_list, e);
+      t->status = THREAD_READY;
+    }
+    e = next_elem;
   }
+
+  intr_set_level(old_level);
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.

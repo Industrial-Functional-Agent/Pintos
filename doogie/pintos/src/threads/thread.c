@@ -333,13 +333,14 @@ void thread_sleep(int64_t ticks)
    ASSERT(!intr_context());
    old_level = intr_disable();
    if (cur != idle_thread) {
-   	cur->sleep_tick = ticks;
-    list_remove(&ready_list);
-    list_push_back (&blocked_list, &cur->elem);
+    cur->sleep_tick = ticks;
+    list_remove(&cur->elem);
+    list_push_back(&blocked_list, &cur->elem);
+    cur->status = THREAD_BLOCKED;
    }
-   cur->status = THREAD_BLOCKED;
    schedule();
    intr_set_level(old_level);
+   printf("hi");
 }
 
 void thread_wakeup(void)
@@ -347,20 +348,19 @@ void thread_wakeup(void)
   int current_tick = timer_ticks();
   struct list_elem *e;
 
+  ASSERT(intr_get_level() == INTR_OFF);
+
   for (e = list_begin(&blocked_list); e != list_end(&blocked_list); 
-  	   e = list_next(e))
+       e = list_next(e))
   {
   	struct thread *t = list_entry(e, struct thread, elem);
-  	enum intr_level old_level;
-
-  	old_level = intr_disable();
+  	
   	if (t->sleep_tick <= current_tick) {
-	  list_remove(&blocked_list);
+	  list_remove(&t->elem);
 	  list_push_back(&ready_list, &t->elem);
 	  t->status = THREAD_READY;
 	}
 	// schedule();
-	intr_set_level(old_level);
   }
 }
 

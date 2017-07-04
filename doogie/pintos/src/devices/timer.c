@@ -90,7 +90,7 @@ void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
-  //printf("thread name: %s ", thread_name());
+  //printf("thread name: %s\n", thread_name());
   //printf("start: %d ", start);
   //printf("end: %d\n", start+ticks);
   ASSERT (intr_get_level () == INTR_ON);

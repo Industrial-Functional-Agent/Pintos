@@ -136,7 +136,6 @@ thread_tick (void)
   else
     kernel_ticks++;
 
-
   thread_wakeup();
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -336,9 +335,11 @@ void thread_sleep(int64_t ticks)
    old_level = intr_disable();
    if (cur != idle_thread) {
     cur->sleep_tick = ticks;
-    list_remove(&cur->elem);
+    // list_remove(&cur->elem);
     list_push_back(&blocked_list, &cur->elem);
     cur->status = THREAD_BLOCKED;
+   } else {
+    cur->status = THREAD_READY;
    }
    schedule();
    intr_set_level(old_level);
@@ -347,12 +348,10 @@ void thread_sleep(int64_t ticks)
 void thread_wakeup(void)
 {
   int64_t current_tick = timer_ticks();
-  struct thread *cur = thread_current();
   struct list_elem *e;
   enum intr_level old_level;
 
   old_level = intr_disable();
-
   e = list_begin(&blocked_list);
   while (e != list_end(&blocked_list)) {
     struct thread *t = list_entry(e, struct thread, elem);
@@ -361,14 +360,12 @@ void thread_wakeup(void)
     if (t->sleep_tick <= current_tick) {
       //printf("sleep tick: %d ", t->sleep_tick);
       //printf("current tick: %d\n", current_tick);
-    
       list_remove(e);
       list_push_back(&ready_list, e);
       t->status = THREAD_READY;
     }
     e = next_elem;
   }
-
   intr_set_level(old_level);
 }
 
